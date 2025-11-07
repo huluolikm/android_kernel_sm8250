@@ -2,7 +2,11 @@
 /*
  * Copyright (C) 2020 Oplus. All rights reserved.
  */
+#undef TRACE_INCLUDE_PATH
+#define TRACE_INCLUDE_PATH ../../include/linux/sched_assist
 
+#undef TRACE_INCLUDE_FILE  
+#define TRACE_INCLUDE_FILE sched_assist_trace
 
 #if !defined(_OPLUS_SCHED_TRACE_H) || defined(TRACE_HEADER_MULTI_READ)
 #define _OPLUS_SCHED_TRACE_H
@@ -11,7 +15,7 @@
 
 #undef TRACE_SYSTEM
 #define TRACE_SYSTEM oplus_sched
-#define TRACE_INCLUDE_FILE sched_assist_trace
+
 
 TRACE_EVENT(oplus_tp_sched_change_ux,
 
@@ -96,6 +100,5 @@ TRACE_EVENT(sched_assist_spread_tasks,
 #endif /* _OPLUS_SCHED_TRACE_H */
 
 /* This part must be outside protection */
-#undef TRACE_INCLUDE_PATH
-#define TRACE_INCLUDE_PATH ../../include/linux/sched_assist
+
 #include <trace/define_trace.h>
