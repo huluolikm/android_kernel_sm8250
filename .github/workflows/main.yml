@@ -22,7 +22,13 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install -y build-essential bison flex libssl-dev bc python3 git curl zip dos2unix libelf-dev
+        sudo apt install -y clang make git python3 flex bison bc libssl-dev \
+          build-essential libncurses-dev ccache automake lzop gperf zip \
+          curl zlib1g-dev libxml2-utils bzip2 libbz2-dev squashfs-tools \
+          pngcrush schedtool dpkg-dev liblz4-dev optipng maven pwgen \
+          libswitch-perl policycoreutils minicom libxml-sax-base-perl \
+          libxml-simple-perl x11proto-core-dev libx11-dev libgl1-mesa-dev \
+          xsltproc unzip nano python2 libelf-dev dos2unix
 
     - name: Cache toolchains
       uses: actions/cache@v3
