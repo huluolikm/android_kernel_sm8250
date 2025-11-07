@@ -33,7 +33,8 @@ extern bool is_webview(struct task_struct *p);
 #endif
 
 #define CREATE_TRACE_POINTS
-#include <sched_assist_trace.h>
+#include "sched_assist_trace.h"
+
 
 int ux_min_sched_delay_granularity;
 int ux_max_inherit_exist = 1000;
