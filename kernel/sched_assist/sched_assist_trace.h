@@ -97,5 +97,5 @@ TRACE_EVENT(sched_assist_spread_tasks,
 
 /* This part must be outside protection */
 #undef TRACE_INCLUDE_PATH
-#define TRACE_INCLUDE_PATH ../../include/trace
+#define TRACE_INCLUDE_PATH ../../include/linux/sched_assist
 #include <trace/define_trace.h>
