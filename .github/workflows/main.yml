@@ -1,0 +1,115 @@
+name: Build Kernel for LineageOS23
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    
+    steps:
+    - name: Checkout kernel source
+      uses: actions/checkout@v4
+      with:
+        repository: huluolikm/android_kernel_sm8250
+        ref: main
+        fetch-depth: 1
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y build-essential bison flex libssl-dev bc python3 git curl zip dos2unix libelf-dev
+
+    - name: Cache toolchains
+      uses: actions/cache@v3
+      id: cache-toolchains
+      with:
+        path: |
+          clang+llvm-12.0.0-x86_64-linux-gnu-ubuntu-20.04
+          prebuilts/gas/linux-x86
+        key: ${{ runner.os }}-toolchains-v1
+        restore-keys: |
+          ${{ runner.os }}-toolchains-
+
+    - name: Download Clang 12.0.0
+      if: steps.cache-toolchains.outputs.cache-hit != 'true'
+      run: |
+        wget -q https://github.com/llvm/llvm-project/releases/download/llvmorg-12.0.0/clang+llvm-12.0.0-x86_64-linux-gnu-ubuntu-20.04.tar.xz
+        tar -xf clang+llvm-12.0.0-x86_64-linux-gnu-ubuntu-20.04.tar.xz
+        echo "CLANG_PATH=$(pwd)/clang+llvm-12.0.0-x86_64-linux-gnu-ubuntu-20.04/bin" >> $GITHUB_ENV
+
+    - name: Clone GCC toolchains
+      if: steps.cache-toolchains.outputs.cache-hit != 'true'
+      run: |
+        mkdir -p prebuilts/gas/linux-x86
+        git clone --depth=1 https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9.git prebuilts/gas/linux-x86/aarch64-linux-android-4.9
+        git clone --depth=1 https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9.git prebuilts/gas/linux-x86/arm-linux-androideabi-4.9
+        echo "GCC64_PATH=$(pwd)/prebuilts/gas/linux-x86/aarch64-linux-android-4.9/bin" >> $GITHUB_ENV
+        echo "GCC32_PATH=$(pwd)/prebuilts/gas/linux-x86/arm-linux-androideabi-4.9/bin" >> $GITHUB_ENV
+
+    - name: Set toolchain paths from cache
+      if: steps.cache-toolchains.outputs.cache-hit == 'true'
+      run: |
+        echo "CLANG_PATH=$(pwd)/clang+llvm-12.0.0-x86_64-linux-gnu-ubuntu-20.04/bin" >> $GITHUB_ENV
+        echo "GCC64_PATH=$(pwd)/prebuilts/gas/linux-x86/aarch64-linux-android-4.9/bin" >> $GITHUB_ENV
+        echo "GCC32_PATH=$(pwd)/prebuilts/gas/linux-x86/arm-linux-androideabi-4.9/bin" >> $GITHUB_ENV
+
+    - name: Fix line endings
+      run: |
+        find . -name "Kconfig*" -type f -exec dos2unix {} \; || true
+
+    - name: Configure kernel
+      run: |
+        # 直接复制配置文件
+        cp arch/arm64/configs/vendor/kona-perf_defconfig .config
+        
+        PATH=${{ env.CLANG_PATH }}:${{ env.GCC64_PATH }}:${{ env.GCC32_PATH }}:$PATH \
+        make ARCH=arm64 CC=clang \
+          CROSS_COMPILE=aarch64-linux-android- \
+          CLANG_TRIPLE=aarch64-linux-gnu- \
+          olddefconfig
+
+    - name: Build kernel with Clang 12
+      run: |
+        # 抑制 OpenSSL 弃用警告
+        export HOSTCFLAGS="-Wno-deprecated-declarations"
+        
+        PATH=${{ env.CLANG_PATH }}:${{ env.GCC64_PATH }}:${{ env.GCC32_PATH }}:$PATH \
+        make -j4 ARCH=arm64 CC=clang \
+          CROSS_COMPILE=aarch64-linux-android- \
+          CLANG_TRIPLE=aarch64-linux-gnu- \
+          LLVM=1 \
+          HOSTCFLAGS="-Wno-deprecated-declarations"
+
+    - name: Package outputs
+      run: |
+        mkdir -p out
+        cp arch/arm64/boot/Image out/ || cp arch/arm64/boot/Image.gz out/
+        [ -f vmlinux ] && cp vmlinux out/
+        [ -f System.map ] && cp System.map out/
+        [ -f arch/arm64/boot/dtbo.img ] && cp arch/arm64/boot/dtbo.img out/
+
+    - name: Create flashable zip
+      run: |
+        git clone --depth=1 https://github.com/osm0sis/AnyKernel3.git anykernel
+        cp out/Image anykernel/ || cp out/Image.gz anykernel/
+        [ -f out/dtbo.img ] && cp out/dtbo.img anykernel/
+        
+        cd anykernel
+        sed -i 's/device\.name1=.*/device.name1=instantnoodle/' anykernel.sh
+        sed -i 's/device\.name2=.*/device.name2=instantnoodlein/' anykernel.sh
+        sed -i 's/kernel\.string=.*/kernel.string=LineageOS23 Kernel/' anykernel.sh
+        
+        zip -r9 ../lineageos-kernel.zip *
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: lineageos-kernel
+        path: |
+          out/
+          lineageos-kernel.zip
