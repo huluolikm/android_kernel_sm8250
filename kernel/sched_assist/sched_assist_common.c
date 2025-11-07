@@ -15,6 +15,8 @@
 #include <../fs/proc/internal.h>
 #include <linux/thread_info.h>
 
+#include <linux/sched_assist/sched_assist_common.h>
+#include <linux/sched_assist/sched_assist_trace.h>
 #include "sched_assist_common.h"
 #include "sched_assist_slide.h"
 #ifdef CONFIG_MMAP_LOCK_OPT
