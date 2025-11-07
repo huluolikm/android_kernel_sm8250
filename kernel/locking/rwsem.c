@@ -19,7 +19,8 @@
 //#ifdef CONFIG_UXCHAIN_V2
 #include <linux/mm.h>
 #include <linux/sched.h>
-#include <../sched/sched.h>
+#include "../sched/sched.h"
+
 #include <linux/sched/clock.h>
 #endif
 
